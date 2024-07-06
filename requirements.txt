@@ -1,0 +1,7 @@
+snowflake-connector-python
+pandas-profiling
+snowflake-sqlalchemy
+snowflake-connector-python[pandas]
+pandas
+seaborn
+matplotlib
