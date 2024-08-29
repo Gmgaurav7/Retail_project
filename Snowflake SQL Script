@@ -1,165 +1,175 @@
+-- Create a new database for the retail project
 create database retail_project;
 
+-- Switch to the newly created database
 use database retail_project;
 
---Creating tables according to the dataset provided by the stake holder in order to copy in into the tables in snowflake database.
+-- Creating tables according to the dataset provided by the stakeholder
 
+-- Household demographic information table
 CREATE OR REPLACE TABLE HH_DEMOGRAPHIC_RAW(
-AGE_DESC CHAR(10),
-MARITAL_STATUS_CODE CHAR(5),
-INCOME_DESC VARCHAR(40),
-HOMEOWNER_DESC VARCHAR(40),
-HH_COMP_DESC VARCHAR (40),
-HOUSEHOLD_SIZE_DESC VARCHAR (10),
-KID_CATEGORY_DESC VARCHAR (40),
-HOUSEHOLD_KEY INT PRIMARY KEY  -- creating Primary so that we can interconnect the data in diffferent tables using foreign keys.
+    AGE_DESC CHAR(10), -- Age range/category of the household
+    MARITAL_STATUS_CODE CHAR(5), -- Marital status of the household
+    INCOME_DESC VARCHAR(40), -- Income level/range of the household
+    HOMEOWNER_DESC VARCHAR(40), -- Homeownership status (own or rent)
+    HH_COMP_DESC VARCHAR(40), -- Household composition description
+    HOUSEHOLD_SIZE_DESC VARCHAR(10), -- Size of the household
+    KID_CATEGORY_DESC VARCHAR(40), -- Number of children in the household
+    HOUSEHOLD_KEY INT PRIMARY KEY -- Unique identifier for each household
 );
 
+-- Marketing campaign description table
 CREATE OR REPLACE TABLE CAMPAIGN_DESC_RAW(
-DESCRIPTION VARCHAR(10) PRIMARY KEY,
-CAMPAIGN INT UNIQUE, -- As in snowflake doesn't sopports composite primary key so we are creating a unique key to tackle that problem.
-START_DAY INT,
-END_DAY INT 
+    DESCRIPTION VARCHAR(10) PRIMARY KEY, -- Description of the campaign
+    CAMPAIGN INT UNIQUE, -- Unique identifier for the campaign
+    START_DAY INT, -- Start day of the campaign
+    END_DAY INT -- End day of the campaign
 );
 
-
+-- Marketing campaign information table
 CREATE OR REPLACE TABLE CAMPAIGN_RAW(
-DESCRIPTION VARCHAR(10),
-HOUSEHOLD_KEY INT,
-CAMPAIGN INT,
-FOREIGN KEY (DESCRIPTION) REFERENCES CAMPAIGN_DESC_RAW(DESCRIPTION),
-FOREIGN KEY (HOUSEHOLD_KEY) REFERENCES HH_DEMOGRAPHIC_RAW(HOUSEHOLD_KEY),
-FOREIGN KEY (CAMPAIGN) REFERENCES CAMPAIGN_DESC_RAW(CAMPAIGN)
+    DESCRIPTION VARCHAR(10), -- Campaign description
+    HOUSEHOLD_KEY INT, -- Foreign key to link to household demographics
+    CAMPAIGN INT, -- Foreign key to link to campaign descriptions
+    FOREIGN KEY (DESCRIPTION) REFERENCES CAMPAIGN_DESC_RAW(DESCRIPTION),
+    FOREIGN KEY (HOUSEHOLD_KEY) REFERENCES HH_DEMOGRAPHIC_RAW(HOUSEHOLD_KEY),
+    FOREIGN KEY (CAMPAIGN) REFERENCES CAMPAIGN_DESC_RAW(CAMPAIGN)
 );
 
-
+-- Product details table
 CREATE OR REPLACE TABLE PRODUCT_RAW(
-PRODUCT_ID INT PRIMARY KEY,
-MANUFACTURER INT,
-DEPARTMENT VARCHAR(50),
-BRAND VARCHAR(20),
-COMMODITY_DESC VARCHAR(100),
-SUB_COMMODITY_DESC VARCHAR(100),
-CURR_SIZE_OF_PRODUCT VARCHAR(15)
+    PRODUCT_ID INT PRIMARY KEY, -- Unique identifier for each product
+    MANUFACTURER INT, -- Manufacturer of the product
+    DEPARTMENT VARCHAR(50), -- Department where the product belongs
+    BRAND VARCHAR(20), -- Brand of the product
+    COMMODITY_DESC VARCHAR(100), -- Commodity description
+    SUB_COMMODITY_DESC VARCHAR(100), -- Sub-commodity description
+    CURR_SIZE_OF_PRODUCT VARCHAR(15) -- Current size of the product
 );
 
-
+-- Coupon information table
 CREATE OR REPLACE TABLE COUPON_RAW(
-COUPON_UPC INT,
-PRODUCT_ID INT,
-CAMPAIGN INT,
-FOREIGN KEY (PRODUCT_ID) REFERENCES PRODUCT_RAW(PRODUCT_ID),
-FOREIGN KEY (CAMPAIGN) REFERENCES CAMPAIGN_DESC_RAW(CAMPAIGN) --create index if you use one Primary key from a composite key in MYSQL Workbench.
+    COUPON_UPC INT, -- Unique identifier for each coupon
+    PRODUCT_ID INT, -- Foreign key to link to product details
+    CAMPAIGN INT, -- Foreign key to link to campaign descriptions
+    FOREIGN KEY (PRODUCT_ID) REFERENCES PRODUCT_RAW(PRODUCT_ID),
+    FOREIGN KEY (CAMPAIGN) REFERENCES CAMPAIGN_DESC_RAW(CAMPAIGN)
 );
 
-
+-- Coupon redemption table
 CREATE OR REPLACE TABLE COUPON_REDEMPT_RAW(
-HOUSEHOLD_KEY INT,
-DAY INT,
-COUPON_UPC INT,
-CAMPAIGN INT,
-FOREIGN KEY (HOUSEHOLD_KEY) REFERENCES HH_DEMOGRAPHIC_RAW(HOUSEHOLD_KEY),
-FOREIGN KEY (CAMPAIGN) REFERENCES CAMPAIGN_DESC_RAW(CAMPAIGN)
+    HOUSEHOLD_KEY INT, -- Foreign key to link to household demographics
+    DAY INT, -- Day of coupon redemption
+    COUPON_UPC INT, -- Foreign key to link to coupon information
+    CAMPAIGN INT, -- Foreign key to link to campaign descriptions
+    FOREIGN KEY (HOUSEHOLD_KEY) REFERENCES HH_DEMOGRAPHIC_RAW(HOUSEHOLD_KEY),
+    FOREIGN KEY (CAMPAIGN) REFERENCES CAMPAIGN_DESC_RAW(CAMPAIGN)
 );
 
-
+-- Customer transactions table
 CREATE OR REPLACE TABLE TRANSACTIONS_RAW(
-HOUSEHOLD_KEY INT,
-BASKET_ID INT,
-DAY INT,
-PRODUCT_ID INT,
-QUANTITY INT,
-SALES_VALUE FLOAT,
-STORE_ID INT,
-RETAIL_DISC FLOAT,
-TRANS_TIME INT,
-WEEK_NO INT,
-COUPON_DISC INT,
-COUPON_MATCH_DISC INT,
-FOREIGN KEY (HOUSEHOLD_KEY) REFERENCES HH_DEMOGRAPHIC_RAW(HOUSEHOLD_KEY),
-FOREIGN KEY (PRODUCT_ID) REFERENCES PRODUCT_RAW(PRODUCT_ID);
+    HOUSEHOLD_KEY INT, -- Foreign key to link to household demographics
+    BASKET_ID INT, -- Unique identifier for each transaction (basket)
+    DAY INT, -- Day of the transaction
+    PRODUCT_ID INT, -- Foreign key to link to product details
+    QUANTITY INT, -- Quantity of the product purchased
+    SALES_VALUE FLOAT, -- Total sales value of the transaction
+    STORE_ID INT, -- Store identifier
+    RETAIL_DISC FLOAT, -- Retail discount applied
+    TRANS_TIME INT, -- Time of the transaction
+    WEEK_NO INT, -- Week number of the transaction
+    COUPON_DISC INT, -- Coupon discount applied
+    COUPON_MATCH_DISC INT, -- Additional discount if coupon matches
+    FOREIGN KEY (HOUSEHOLD_KEY) REFERENCES HH_DEMOGRAPHIC_RAW(HOUSEHOLD_KEY),
+    FOREIGN KEY (PRODUCT_ID) REFERENCES PRODUCT_RAW(PRODUCT_ID)
+);
 
+-- Integrating Snowflake database with S3 bucket where client dumps the raw dataset
 
-
--- Integrating Snowflake database with s3 bucket where client dumps the raw dataset.
-
-
+-- Create a storage integration for connecting to S3
 CREATE OR REPLACE STORAGE INTEGRATION s3_int
-TYPE = EXTERNAL_STAGE
-STORAGE_PROVIDER = S3
-ENABLED = TRUE
-STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::851725516491:role/reatailrole'
-STORAGE_ALLOWED_LOCATIONS = ('s3://retail-data-bucket/');
+    TYPE = EXTERNAL_STAGE
+    STORAGE_PROVIDER = S3
+    ENABLED = TRUE
+    STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::851725516491:role/retailrole'
+    STORAGE_ALLOWED_LOCATIONS = ('s3://retail-data-bucket/');
 
-
+-- Describe the integration to confirm it was created successfully
 DESC INTEGRATION s3_int;
 
--- Creating an internal stage which holds the data ingested from AWS S3 bucket.
-
+-- Creating an internal stage which holds the data ingested from AWS S3 bucket
 CREATE OR REPLACE STAGE RETAIL
-URL = 's3://retail-data-bucket'
-file_format = CSV
-STORAGE_INTEGRATION = s3_int;
+    URL = 's3://retail-data-bucket'
+    file_format = CSV -- Assuming the files are in CSV format
+    STORAGE_INTEGRATION = s3_int;
 
+-- List the files in the stage to verify the connection
 LIST @RETAIL;
 
+-- Show the stages in the current database
 SHOW STAGES;
 
+-- Creating Snowpipes that automatically load data into tables as files arrive in the S3 bucket
 
---Creating Snowpipe that recognises CSV that are ingested from external stage and copies the data into existing tables.
-
+-- Snowpipe for household demographics data
 CREATE OR REPLACE PIPE RETAIL_SNOWPIPE_DEMOGRAPHIC AUTO_INGEST = TRUE AS
-COPY INTO RETAIL_PROJECT.PUBLIC.HH_DEMOGRAPHIC_RAW
-FROM '@RETAIL/hh_demographic/'
-FILE_FORMAT = CSV;
+    COPY INTO RETAIL_PROJECT.PUBLIC.HH_DEMOGRAPHIC_RAW
+    FROM '@RETAIL/hh_demographic/'
+    FILE_FORMAT = CSV;
 
+-- Snowpipe for campaign description data
 CREATE OR REPLACE PIPE RETAIL_SNOWPIPE_CAMPAIGN_DESC AUTO_INGEST = TRUE AS 
-COPY INTO RETAIL_PROJECT.PUBLIC.CAMPAIGN_DESC_RAW 
-FROM '@RETAIL/campaign_desc/'
-FILE_FORMAT = CSV;
+    COPY INTO RETAIL_PROJECT.PUBLIC.CAMPAIGN_DESC_RAW 
+    FROM '@RETAIL/campaign_desc/'
+    FILE_FORMAT = CSV;
 
+-- Snowpipe for campaign data
 CREATE OR REPLACE PIPE RETAIL_SNOWPIPE_CAMPAIGN AUTO_INGEST = TRUE AS 
-COPY INTO RETAIL_PROJECT.PUBLIC.CAMPAIGN_RAW
-FROM '@RETAIL/campaign_table/'
-FILE_FORMAT = CSV;
+    COPY INTO RETAIL_PROJECT.PUBLIC.CAMPAIGN_RAW
+    FROM '@RETAIL/campaign_table/'
+    FILE_FORMAT = CSV;
 
+-- Snowpipe for coupon data
 CREATE OR REPLACE PIPE RETAIL_SNOWPIPE_COUPON AUTO_INGEST = TRUE AS 
-COPY INTO RETAIL_PROJECT.PUBLIC.COUPON_RAW
-FROM '@RETAIL/coupon/'
-FILE_FORMAT = CSV;
+    COPY INTO RETAIL_PROJECT.PUBLIC.COUPON_RAW
+    FROM '@RETAIL/coupon/'
+    FILE_FORMAT = CSV;
 
+-- Snowpipe for coupon redemption data
 CREATE OR REPLACE PIPE RETAIL_SNOWPIPE_COUPON_REDEMPT AUTO_INGEST = TRUE AS 
-COPY INTO RETAIL_PROJECT.PUBLIC.COUPON_REDEMPT_RAW
-FROM '@RETAIL/coupon_redempt/'
-FILE_FORMAT = CSV;
+    COPY INTO RETAIL_PROJECT.PUBLIC.COUPON_REDEMPT_RAW
+    FROM '@RETAIL/coupon_redempt/'
+    FILE_FORMAT = CSV;
 
+-- Snowpipe for product data
 CREATE OR REPLACE PIPE RETAIL_SNOWPIPE_PRODUCT AUTO_INGEST = TRUE AS 
-COPY INTO RETAIL_PROJECT.PUBLIC.PRODUCT_RAW
-FROM '@RETAIL/product/'
-FILE_FORMAT = CSV;
+    COPY INTO RETAIL_PROJECT.PUBLIC.PRODUCT_RAW
+    FROM '@RETAIL/product/'
+    FILE_FORMAT = CSV;
 
+-- Snowpipe for transaction data
 CREATE OR REPLACE PIPE RETAIL_SNOWPIPE_TRANSACTIONS AUTO_INGEST = TRUE AS 
-COPY INTO RETAIL_PROJECT.PUBLIC.TRANSACTIONS_RAW
-FROM '@RETAIL/transactions/'
-FILE_FORMAT = CSV;
+    COPY INTO RETAIL_PROJECT.PUBLIC.TRANSACTIONS_RAW
+    FROM '@RETAIL/transactions/'
+    FILE_FORMAT = CSV;
 
-
+-- Show all Snowpipes in the current database
 SHOW PIPES;
 
-ALTER PIPE RETAIL_SNOWPIPE_CAMPAIGN refresh ; 
-ALTER PIPE RETAIL_SNOWPIPE_CAMPAIGN_DESC refresh ; 
-ALTER PIPE RETAIL_SNOWPIPE_COUPON refresh ; 
-ALTER PIPE RETAIL_SNOWPIPE_COUPON_REDEMPT refresh ; 
-ALTER PIPE RETAIL_SNOWPIPE_DEMOGRAPHIC refresh ; 
-ALTER PIPE RETAIL_SNOWPIPE_PRODUCT refresh ; 
-ALTER PIPE RETAIL_SNOWPIPE_TRANSACTIONS refresh ; 
+-- Manually trigger the Snowpipes to refresh data if needed
+ALTER PIPE RETAIL_SNOWPIPE_CAMPAIGN refresh; 
+ALTER PIPE RETAIL_SNOWPIPE_CAMPAIGN_DESC refresh; 
+ALTER PIPE RETAIL_SNOWPIPE_COUPON refresh; 
+ALTER PIPE RETAIL_SNOWPIPE_COUPON_REDEMPT refresh; 
+ALTER PIPE RETAIL_SNOWPIPE_DEMOGRAPHIC refresh; 
+ALTER PIPE RETAIL_SNOWPIPE_PRODUCT refresh; 
+ALTER PIPE RETAIL_SNOWPIPE_TRANSACTIONS refresh; 
 
-
-select count(*) from CAMPAIGN_DESC_RAW ;
-select count(*) from CAMPAIGN_RAW ;
-select count(*) from COUPON_RAW ;
-select count(*) from COUPON_REDEMPT_RAW ;
-select count(*) from HH_DEMOGRAPHIC_RAW ;
-select count(*) from PRODUCT_RAW ;
-select count(*) from TRANSACTIONS_RAW ;
-
+-- Count the number of records in each table to verify data loading
+select count(*) from CAMPAIGN_DESC_RAW;
+select count(*) from CAMPAIGN_RAW;
+select count(*) from COUPON_RAW;
+select count(*) from COUPON_REDEMPT_RAW;
+select count(*) from HH_DEMOGRAPHIC_RAW;
+select count(*) from PRODUCT_RAW;
+select count(*) from TRANSACTIONS_RAW;
