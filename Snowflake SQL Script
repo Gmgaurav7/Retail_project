@@ -8,29 +8,29 @@ use database retail_project;
 
 -- Household demographic information table
 CREATE OR REPLACE TABLE HH_DEMOGRAPHIC_RAW(
-    AGE_DESC CHAR(10), -- Age range/category of the household
-    MARITAL_STATUS_CODE CHAR(5), -- Marital status of the household
-    INCOME_DESC VARCHAR(40), -- Income level/range of the household
-    HOMEOWNER_DESC VARCHAR(40), -- Homeownership status (own or rent)
-    HH_COMP_DESC VARCHAR(40), -- Household composition description
-    HOUSEHOLD_SIZE_DESC VARCHAR(10), -- Size of the household
-    KID_CATEGORY_DESC VARCHAR(40), -- Number of children in the household
-    HOUSEHOLD_KEY INT PRIMARY KEY -- Unique identifier for each household
+    AGE_DESC CHAR(10), 
+    MARITAL_STATUS_CODE CHAR(5),
+    INCOME_DESC VARCHAR(40),
+    HOMEOWNER_DESC VARCHAR(40),
+    HH_COMP_DESC VARCHAR(40),
+    HOUSEHOLD_SIZE_DESC VARCHAR(10),
+    KID_CATEGORY_DESC VARCHAR(40),
+    HOUSEHOLD_KEY INT PRIMARY KEY
 );
 
 -- Marketing campaign description table
 CREATE OR REPLACE TABLE CAMPAIGN_DESC_RAW(
-    DESCRIPTION VARCHAR(10) PRIMARY KEY, -- Description of the campaign
-    CAMPAIGN INT UNIQUE, -- Unique identifier for the campaign
-    START_DAY INT, -- Start day of the campaign
-    END_DAY INT -- End day of the campaign
+    DESCRIPTION VARCHAR(10) PRIMARY KEY,
+    CAMPAIGN INT UNIQUE,
+    START_DAY INT,
+    END_DAY INT
 );
 
 -- Marketing campaign information table
 CREATE OR REPLACE TABLE CAMPAIGN_RAW(
-    DESCRIPTION VARCHAR(10), -- Campaign description
-    HOUSEHOLD_KEY INT, -- Foreign key to link to household demographics
-    CAMPAIGN INT, -- Foreign key to link to campaign descriptions
+    DESCRIPTION VARCHAR(10),
+    HOUSEHOLD_KEY INT,
+    CAMPAIGN INT,
     FOREIGN KEY (DESCRIPTION) REFERENCES CAMPAIGN_DESC_RAW(DESCRIPTION),
     FOREIGN KEY (HOUSEHOLD_KEY) REFERENCES HH_DEMOGRAPHIC_RAW(HOUSEHOLD_KEY),
     FOREIGN KEY (CAMPAIGN) REFERENCES CAMPAIGN_DESC_RAW(CAMPAIGN)
@@ -39,47 +39,47 @@ CREATE OR REPLACE TABLE CAMPAIGN_RAW(
 -- Product details table
 CREATE OR REPLACE TABLE PRODUCT_RAW(
     PRODUCT_ID INT PRIMARY KEY, -- Unique identifier for each product
-    MANUFACTURER INT, -- Manufacturer of the product
-    DEPARTMENT VARCHAR(50), -- Department where the product belongs
-    BRAND VARCHAR(20), -- Brand of the product
-    COMMODITY_DESC VARCHAR(100), -- Commodity description
-    SUB_COMMODITY_DESC VARCHAR(100), -- Sub-commodity description
-    CURR_SIZE_OF_PRODUCT VARCHAR(15) -- Current size of the product
+    MANUFACTURER INT,
+    DEPARTMENT VARCHAR(50),
+    BRAND VARCHAR(20),
+    COMMODITY_DESC VARCHAR(100),
+    SUB_COMMODITY_DESC VARCHAR(100),
+    CURR_SIZE_OF_PRODUCT VARCHAR(15)
 );
 
 -- Coupon information table
 CREATE OR REPLACE TABLE COUPON_RAW(
     COUPON_UPC INT, -- Unique identifier for each coupon
-    PRODUCT_ID INT, -- Foreign key to link to product details
-    CAMPAIGN INT, -- Foreign key to link to campaign descriptions
+    PRODUCT_ID INT,
+    CAMPAIGN INT,
     FOREIGN KEY (PRODUCT_ID) REFERENCES PRODUCT_RAW(PRODUCT_ID),
     FOREIGN KEY (CAMPAIGN) REFERENCES CAMPAIGN_DESC_RAW(CAMPAIGN)
 );
 
 -- Coupon redemption table
 CREATE OR REPLACE TABLE COUPON_REDEMPT_RAW(
-    HOUSEHOLD_KEY INT, -- Foreign key to link to household demographics
-    DAY INT, -- Day of coupon redemption
-    COUPON_UPC INT, -- Foreign key to link to coupon information
-    CAMPAIGN INT, -- Foreign key to link to campaign descriptions
+    HOUSEHOLD_KEY INT,
+    DAY INT,
+    COUPON_UPC INT,
+    CAMPAIGN INT,
     FOREIGN KEY (HOUSEHOLD_KEY) REFERENCES HH_DEMOGRAPHIC_RAW(HOUSEHOLD_KEY),
     FOREIGN KEY (CAMPAIGN) REFERENCES CAMPAIGN_DESC_RAW(CAMPAIGN)
 );
 
 -- Customer transactions table
 CREATE OR REPLACE TABLE TRANSACTIONS_RAW(
-    HOUSEHOLD_KEY INT, -- Foreign key to link to household demographics
+    HOUSEHOLD_KEY INT,
     BASKET_ID INT, -- Unique identifier for each transaction (basket)
-    DAY INT, -- Day of the transaction
-    PRODUCT_ID INT, -- Foreign key to link to product details
-    QUANTITY INT, -- Quantity of the product purchased
-    SALES_VALUE FLOAT, -- Total sales value of the transaction
-    STORE_ID INT, -- Store identifier
-    RETAIL_DISC FLOAT, -- Retail discount applied
-    TRANS_TIME INT, -- Time of the transaction
-    WEEK_NO INT, -- Week number of the transaction
-    COUPON_DISC INT, -- Coupon discount applied
-    COUPON_MATCH_DISC INT, -- Additional discount if coupon matches
+    DAY INT,
+    PRODUCT_ID INT,
+    QUANTITY INT,
+    SALES_VALUE FLOAT,
+    STORE_ID INT,
+    RETAIL_DISC FLOAT,
+    TRANS_TIME INT,
+    WEEK_NO INT,
+    COUPON_DISC INT,
+    COUPON_MATCH_DISC INT,
     FOREIGN KEY (HOUSEHOLD_KEY) REFERENCES HH_DEMOGRAPHIC_RAW(HOUSEHOLD_KEY),
     FOREIGN KEY (PRODUCT_ID) REFERENCES PRODUCT_RAW(PRODUCT_ID)
 );
@@ -100,7 +100,7 @@ DESC INTEGRATION s3_int;
 -- Creating an internal stage which holds the data ingested from AWS S3 bucket
 CREATE OR REPLACE STAGE RETAIL
     URL = 's3://retail-data-bucket'
-    file_format = CSV -- Assuming the files are in CSV format
+    file_format = CSV -- This is a manual file fomat created in database by name CSV to import datasets in ".csv" format
     STORAGE_INTEGRATION = s3_int;
 
 -- List the files in the stage to verify the connection
